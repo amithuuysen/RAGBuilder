@@ -7,6 +7,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
 
 # Local RAGBuilder Databases, Logs & Temp Files
 ragbuilder.db
@@ -20,8 +21,9 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 frontend/build/
-.next/
-node_modules/
+frontend/.env
+frontend/.env*.local
+frontend/.tsbuildinfo
 
 # OS Files
 .DS_Store
