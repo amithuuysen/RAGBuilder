@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGBuilder - Local RAG Framework</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.4);
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-hover:hover {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col justify-between shrink-0">
+        <div>
+            <!-- Header/Logo -->
+            <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                    <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">RAGBuilder</h1>
+                    <span class="text-[10px] text-brand-400 font-semibold tracking-widest uppercase">Local Engine</span>
+                </div>
+            </div>
+
+            <!-- Bot Navigation List -->
+            <div class="p-4 flex flex-col gap-2">
+                <div class="flex items-center justify-between px-2 mb-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">My Bots</span>
+                    <button onclick="openCreateModal()" class="p-1.5 rounded-lg bg-brand-600/10 hover:bg-brand-600 text-brand-400 hover:text-white transition-all duration-200">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                
+                <div id="bot-list" class="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
+                    <!-- Dynamic List of Bots -->
+                    <div class="animate-pulse flex space-x-4 p-3 bg-slate-800/40 rounded-xl">
+                        <div class="rounded-full bg-slate-700 h-6 w-6"></div>
+                        <div class="flex-1 space-y-2 py-1">
+                            <div class="h-2 bg-slate-700 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Status & System -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="h-3 w-3 rounded-full bg-emerald-500 animate-ping"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-slate-300">Local Services Active</p>
+                    <p class="text-[10px] text-slate-500 truncate">Ollama & LM Studio</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col min-w-0 relative">
+        <!-- Dashboard Empty State -->
+        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-slate-900 to-slate-950">
+            <div class="max-w-2xl text-center space-y-6">
+                <div class="inline-flex p-4 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-2">
+                    <i data-lucide="bot" class="w-16 h-16"></i>
+                </div>
+                <h2 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">Build Your Local RAG Assistant</h2>
+                <p class="text-base text-slate-400">
+                    Create lightweight, secure knowledge bots powered by your local models. Upload custom documents (cricket, finance, coding guidelines) and query them through private APIs.
+                </p>
+                
+                <div class="flex justify-center gap-4 pt-4">
+                    <button onclick="openCreateModal()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-500 hover:from-brand-500 hover:to-indigo-400 text-white font-medium shadow-lg shadow-brand-500/20 hover:scale-[1.02] transition-all duration-200">
+                        Create Your First Bot
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 text-left">
+                    <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                        <h4 class="text-sm font-semibold text-slate-200 mb-1 flex items-center gap-2">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Local & Private
+                        </h4>
+                        <p class="text-xs text-slate-400">Your documents never leave your computer. Powered fully by Ollama or LM Studio.</p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                        <h4 class="text-sm font-semibold text-slate-200 mb-1 flex items-center gap-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-blue-400"></i> Ready-to-use API
+                        </h4>
+                        <p class="text-xs text-slate-400">Every bot automatically exposes a dedicated POST endpoint for integration into your workflows.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bot Workspace Screen (Hidden initially) -->
+        <div id="bot-workspace" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
+            <!-- Bot Header -->
+            <div class="px-8 py-5 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-brand-400">
+                        <i data-lucide="bot" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h2 id="active-bot-name" class="text-2xl font-bold text-white">Bot Name</h2>
+                            <span id="active-bot-provider" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20">Ollama</span>
+                        </div>
+                        <p id="active-bot-desc" class="text-sm text-slate-400 mt-0.5">Bot description goes here...</p>
+                    </div>
+                </div>
+
+                <!-- Action Tabs -->
+                <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    <button onclick="switchTab('chat')" id="tab-chat" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-150 bg-slate-800 text-white shadow-sm">
+                        Chat Playground
+                    </button>
+                    <button onclick="switchTab('documents')" id="tab-documents" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-400 hover:text-white">
+                        Documents
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-400 hover:text-white">
+                        Configuration & API
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content Area -->
+            <div class="flex-1 overflow-hidden relative">
+                
+                <!-- Tab: Chat Playground -->
+                <div id="panel-chat" class="h-full flex overflow-hidden">
+                    <!-- Left: Chat Window -->
+                    <div class="flex-1 flex flex-col h-full border-r border-slate-900 bg-slate-950">
+                        <!-- Messages Container -->
+                        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+                            <!-- Messages populated dynamically -->
+                            <div class="max-w-2xl mx-auto text-center py-12 text-slate-500">
+                                <i data-lucide="message-square" class="w-12 h-12 mx-auto mb-3 opacity-25"></i>
+                                <p class="text-sm">Start a conversation. The assistant will search the uploaded documents to craft responses.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="p-4 border-t border-slate-900 bg-slate-900/20 shrink-0">
+                            <form id="chat-form" onsubmit="sendChatMessage(event)" class="max-w-3xl mx-auto flex gap-2">
+                                <input id="chat-input" type="text" autocomplete="off" placeholder="Ask a question about your documents..." 
+                                       class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-white placeholder-slate-500 transition-all duration-200">
+                                <button type="submit" class="bg-brand-600 hover:bg-brand-500 text-white px-5 py-3 rounded-xl font-medium text-sm transition-all duration-150 flex items-center gap-2">
+                                    <span>Send</span>
+                                    <i data-lucide="send" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right: Context inspector (collapsible sidebar) -->
+                    <div class="w-96 bg-slate-900/30 flex flex-col shrink-0">
+                        <div class="p-4 border-b border-slate-900">
+                            <h3 class="font-bold text-slate-300 flex items-center gap-2 text-sm">
+                                <i data-lucide="database" class="w-4 h-4 text-brand-400"></i> Retrieved Context
+                            </h3>
+                            <p class="text-[10px] text-slate-500 mt-1">This context was injected into the LLM prompt to answer your query.</p>
+                        </div>
+                        <div id="retrieved-sources" class="flex-1 overflow-y-auto p-4 space-y-3">
+                            <div class="text-xs text-slate-500 text-center py-8">
+                                No sources retrieved yet. Submit a message.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Documents -->
+                <div id="panel-documents" class="hidden h-full overflow-y-auto p-8 bg-slate-950">
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Bot Knowledge Base</h3>
+                                <p class="text-xs text-slate-400">Upload documents to index them into vector segments.</p>
+                            </div>
+                        </div>
+
+                        <!-- Dropzone Upload Form -->
+                        <div class="border-2 border-dashed border-slate-800 rounded-2xl p-8 bg-slate-900/20 hover:border-brand-500/50 hover:bg-slate-900/40 transition-all duration-200 text-center relative">
+                            <input type="file" id="doc-file-input" onchange="uploadDocumentFile()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <div class="space-y-3 pointer-events-none">
+                                <div class="inline-flex p-3 rounded-xl bg-slate-800 text-slate-400">
+                                    <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                                </div>
+                                <div class="text-sm font-semibold text-slate-300">
+                                    Click or Drag file to upload
+                                </div>
+                                <div class="text-xs text-slate-500">
+                                    Supports Text (.txt), Markdown (.md), or raw configuration files
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Progress / Status -->
+                        <div id="upload-status" class="hidden p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="loader" class="w-5 h-5 text-brand-400 animate-spin"></i>
+                                <span class="text-xs text-slate-300">Processing & embedding chunks...</span>
+                            </div>
+                        </div>
+
+                        <!-- Documents List Table -->
+                        <div class="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-hidden">
+                            <div class="p-4 border-b border-slate-800/80">
+                                <h4 class="text-sm font-bold text-slate-300">Indexed Files</h4>
+                            </div>
+                            <div class="divide-y divide-slate-850" id="documents-list">
+                                <!-- Populated dynamically -->
+                                <div class="p-6 text-center text-xs text-slate-500">
+                                    No documents uploaded yet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Configuration & API -->
+                <div id="panel-settings" class="hidden h-full overflow-y-auto p-8 bg-slate-950">
+                    <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        
+                        <!-- Settings Form -->
+                        <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-4">
+                            <h3 class="text-lg font-bold text-white mb-2">Bot Settings</h3>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Bot Name</label>
+                                <input type="text" id="edit-bot-name" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                                <input type="text" id="edit-bot-desc" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Search Technique</label>
+                                    <select id="edit-bot-technique" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                                        <option value="vector">Vector Search</option>
+                                        <option value="keyword">Keyword Match</option>
+                                        <option value="hybrid">Hybrid Search</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">LLM Model</label>
+                                    <input type="text" id="edit-bot-llm" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">System Prompt</label>
+                                <textarea id="edit-bot-system-prompt" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-brand-500"></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+                                <button onclick="deleteActiveBot()" class="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1.5">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Bot
+                                </button>
+                                <button onclick="saveBotSettings()" class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- API Endpoint Details -->
+                        <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                    <i data-lucide="code" class="w-5 h-5 text-brand-400"></i> REST API Integration
+                                </h3>
+                                <p class="text-xs text-slate-400 mb-6">You can query this bot programmatically by sending a simple JSON request to its exposed endpoint.</p>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Endpoint URL</label>
+                                        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between">
+                                            <code id="api-endpoint-str" class="text-xs text-brand-400 break-all select-all">/api/bots/1/query</code>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">cURL Example</label>
+                                        <pre class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-[10px] text-slate-300 overflow-x-auto select-all" id="api-curl-str">curl -X POST ...</pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-brand-500/5 border border-brand-500/10 text-xs text-slate-400 mt-6">
+                                <strong class="text-slate-200">Response format:</strong>
+                                <pre class="mt-2 text-[10px] text-brand-300 overflow-x-auto">
+{
+  "bot": "CricketBot",
+  "query": "Who is the captain?",
+  "response": "...",
+  "sources": ["..."]
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Create Bot Modal Dialog -->
+    <div id="create-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white">Create Custom Bot</h3>
+                <button onclick="closeCreateModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Form -->
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Bot Name</label>
+                    <input type="text" id="new-bot-name" placeholder="e.g. CricketBot" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                    <input type="text" id="new-bot-desc" placeholder="e.g. Handles queries regarding rules & players" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">LLM Provider</label>
+                        <select id="new-bot-provider" onchange="detectLocalModels()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="ollama">Ollama (Default: 11434)</option>
+                            <option value="lm_studio">LM Studio (Default: 1234)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">API Port / Base URL</label>
+                        <input type="text" id="new-bot-url" placeholder="http://localhost:11434" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">LLM Chat Model</label>
+                        <select id="new-bot-llm-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <!-- Populated dynamically -->
+                            <option value="">-- Autodetect or Type --</option>
+                        </select>
+                        <input type="text" id="new-bot-llm-custom" placeholder="Or type model name..." class="mt-1.5 w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Embedding Model</label>
+                        <select id="new-bot-embed-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="">-- Autodetect or Type --</option>
+                        </select>
+                        <input type="text" id="new-bot-embed-custom" placeholder="Or type model name..." class="mt-1.5 w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Search Strategy</label>
+                        <select id="new-bot-strategy" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="vector">Vector Similarity</option>
+                            <option value="keyword">Keyword Search</option>
+                            <option value="hybrid">Hybrid Search</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="testConnection()" class="w-full bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Detect local models
+                        </button>
+                    </div>
+                </div>
+
+                <div id="detection-feedback" class="hidden text-xs text-brand-400 bg-brand-500/5 border border-brand-500/10 p-3 rounded-xl flex items-center gap-2">
+                    <!-- Dynamic feedback messages -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-950/40">
+                <button onclick="closeCreateModal()" class="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-850 text-slate-300 text-sm font-semibold transition-colors">
+                    Cancel
+                </button>
+                <button onclick="createBot()" class="bg-brand-600 hover:bg-brand-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-brand-500/20 transition-all">
+                    Create Bot
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Scripts -->
+    <script>
+        let bots = [];
+        let activeBot = null;
+        let activeTab = 'chat';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load bots list
+            loadBots();
+            // Init default inputs
+            document.getElementById('new-bot-provider').dispatchEvent(new Event('change'));
+        });
+
+        // Provider trigger to update defaults
+        document.getElementById('new-bot-provider').addEventListener('change', (e) => {
+            const urlInput = document.getElementById('new-bot-url');
+            if (e.target.value === 'ollama') {
+                urlInput.value = 'http://localhost:11434';
+            } else {
+                urlInput.value = 'http://localhost:1234';
+            }
+        });
+
+        async function loadBots() {
+            try {
+                const res = await fetch('/api/bots');
+                bots = await res.json();
+                renderBotList();
+            } catch (err) {
+                console.error("Failed to load bots:", err);
+            }
+        }
+
+        function renderBotList() {
+            const container = document.getElementById('bot-list');
+            if (bots.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center p-6 text-xs text-slate-500">
+                        No bots found.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = bots.map(bot => `
+                <button onclick="selectBot(${bot.id})" class="w-full text-left p-3.5 rounded-xl flex items-center gap-3 transition-all duration-200 ${activeBot && activeBot.id === bot.id ? 'bg-gradient-to-r from-brand-600 to-brand-700/80 border border-brand-500/30 text-white shadow-lg shadow-brand-500/10' : 'hover:bg-slate-800/60 border border-transparent text-slate-300'}">
+                    <div class="h-9 w-9 rounded-lg flex items-center justify-center ${activeBot && activeBot.id === bot.id ? 'bg-white/20 text-white' : 'bg-slate-800 text-brand-400 border border-slate-700'}">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold truncate">${escapeHtml(bot.name)}</p>
+                        <p class="text-[10px] opacity-70 truncate">${escapeHtml(bot.llm_model)}</p>
+                    </div>
+                </button>
+            `).join('');
+            
+            // Re-bind Lucide icons
+            lucide.createIcons();
+        }
+
+        function selectBot(id) {
+            const bot = bots.find(b => b.id === id);
+            if (!bot) return;
+            activeBot = bot;
+            
+            // Show Workspace
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('bot-workspace').classList.remove('hidden');
+
+            // Render details
+            document.getElementById('active-bot-name').innerText = bot.name;
+            document.getElementById('active-bot-desc').innerText = bot.description || 'No description provided.';
+            document.getElementById('active-bot-provider').innerText = bot.provider;
+
+            // Load panel items
+            renderBotList();
+            switchTab(activeTab);
+            loadDocuments();
+            
+            // Populate Config/Settings forms
+            document.getElementById('edit-bot-name').value = bot.name;
+            document.getElementById('edit-bot-desc').value = bot.description || '';
+            document.getElementById('edit-bot-technique').value = bot.search_technique;
+            document.getElementById('edit-bot-llm').value = bot.llm_model;
+            document.getElementById('edit-bot-system-prompt').value = bot.system_prompt || '';
+
+            // Setup API section details
+            const origin = window.location.origin;
+            const endpoint = `${origin}/api/bots/${bot.id}/query`;
+            document.getElementById('api-endpoint-str').innerText = endpoint;
+            document.getElementById('api-curl-str').innerText = `curl -X POST "${endpoint}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"query": "Enter your prompt here"}'`;
+
+            // Reset Playground Chat
+            const chatContainer = document.getElementById('chat-messages');
+            chatContainer.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center py-12 text-slate-500">
+                    <i data-lucide="message-square" class="w-12 h-12 mx-auto mb-3 opacity-25"></i>
+                    <p class="text-sm">Start a conversation with ${escapeHtml(bot.name)}. The assistant will search the uploaded documents to craft responses.</p>
+                </div>
+            `;
+            document.getElementById('retrieved-sources').innerHTML = `
+                <div class="text-xs text-slate-500 text-center py-8">
+                    No sources retrieved yet. Submit a message.
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            // Toggle active classes on tabs
+            ['chat', 'documents', 'settings'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const panel = document.getElementById(`panel-${t}`);
+                if (t === tab) {
+                    btn.classList.add('bg-slate-800', 'text-white', 'shadow-sm');
+                    btn.classList.remove('text-slate-400');
+                    panel.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('bg-slate-800', 'text-white', 'shadow-sm');
+                    btn.classList.add('text-slate-400');
+                    panel.classList.add('hidden');
+                }
+            });
+            lucide.createIcons();
+        }
+
+        // Connections & Auto-detection
+
+        async function testConnection() {
+            const provider = document.getElementById('new-bot-provider').value;
+            const api_url = document.getElementById('new-bot-url').value;
+            const feedback = document.getElementById('detection-feedback');
+            
+            feedback.classList.remove('hidden');
+            feedback.className = 'text-xs text-brand-400 bg-brand-500/5 border border-brand-500/10 p-3 rounded-xl flex items-center gap-2';
+            feedback.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i> Detecting active models...`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/providers/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider, api_url })
+                });
+                const data = await res.json();
+                
+                if (data.success && data.models.length > 0) {
+                    feedback.className = 'text-xs text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl flex items-center gap-2';
+                    feedback.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Connected successfully! Found ${data.models.length} models.`;
+                    
+                    // Populate select options
+                    const llmSelect = document.getElementById('new-bot-llm-select');
+                    const embedSelect = document.getElementById('new-bot-embed-select');
+                    
+                    const optionsHtml = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+                    llmSelect.innerHTML = `<option value="">-- Select Model --</option>` + optionsHtml;
+                    embedSelect.innerHTML = `<option value="">-- Select Model --</option>` + optionsHtml;
+                    
+                    // Auto select first options
+                    if (data.models.length > 0) {
+                        llmSelect.selectedIndex = 1;
+                        if (data.models.length > 1) {
+                            embedSelect.selectedIndex = 2; // Guess second model for embedding or first
+                        } else {
+                            embedSelect.selectedIndex = 1;
+                        }
+                    }
+                } else {
+                    feedback.className = 'text-xs text-red-400 bg-red-500/5 border border-red-500/10 p-3 rounded-xl flex items-center gap-2';
+                    feedback.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i> ${data.message || 'No models found.'}`;
+                }
+            } catch (err) {
+                feedback.className = 'text-xs text-red-400 bg-red-500/5 border border-red-500/10 p-3 rounded-xl flex items-center gap-2';
+                feedback.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i> Failed to connect. Check your server address.`;
+            }
+            lucide.createIcons();
+        }
+
+        // Bot Management
+
+        function openCreateModal() {
+            document.getElementById('create-modal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-modal').classList.add('hidden');
+        }
+
+        async function createBot() {
+            const name = document.getElementById('new-bot-name').value;
+            const description = document.getElementById('new-bot-desc').value;
+            const provider = document.getElementById('new-bot-provider').value;
+            const api_url = document.getElementById('new-bot-url').value;
+            const strategy = document.getElementById('new-bot-strategy').value;
+
+            // LLM Select/Custom input
+            const llmSelect = document.getElementById('new-bot-llm-select').value;
+            const llmCustom = document.getElementById('new-bot-llm-custom').value;
+            const llm_model = llmCustom || llmSelect;
+
+            // Embed Select/Custom input
+            const embedSelect = document.getElementById('new-bot-embed-select').value;
+            const embedCustom = document.getElementById('new-bot-embed-custom').value;
+            const embedding_model = embedCustom || embedSelect;
+
+            if (!name || !llm_model) {
+                alert("Please specify a Name and Chat Model.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/bots', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        description,
+                        provider,
+                        api_url,
+                        llm_model,
+                        embedding_model,
+                        search_technique: strategy,
+                        chunk_size: 500,
+                        chunk_overlap: 50,
+                        system_prompt: "You are a helpful assistant."
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    closeCreateModal();
+                    await loadBots();
+                    selectBot(data.id);
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || "Error creating bot.");
+                }
+            } catch (err) {
+                alert("Server connection failed.");
+            }
+        }
+
+        async function saveBotSettings() {
+            if (!activeBot) return;
+            const name = document.getElementById('edit-bot-name').value;
+            const description = document.getElementById('edit-bot-desc').value;
+            const technique = document.getElementById('edit-bot-technique').value;
+            const llm_model = document.getElementById('edit-bot-llm').value;
+            const system_prompt = document.getElementById('edit-bot-system-prompt').value;
+
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        description,
+                        provider: activeBot.provider,
+                        api_url: activeBot.api_url,
+                        llm_model,
+                        embedding_model: activeBot.embedding_model,
+                        search_technique: technique,
+                        chunk_size: activeBot.chunk_size,
+                        chunk_overlap: activeBot.chunk_overlap,
+                        system_prompt
+                    })
+                });
+
+                if (res.ok) {
+                    alert("Settings updated successfully!");
+                    await loadBots();
+                    selectBot(activeBot.id);
+                } else {
+                    alert("Failed to update settings.");
+                }
+            } catch (err) {
+                alert("Error connecting to server.");
+            }
+        }
+
+        async function deleteActiveBot() {
+            if (!activeBot) return;
+            if (!confirm("Are you sure you want to delete this bot and all its documents? This cannot be undone.")) return;
+
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    activeBot = null;
+                    document.getElementById('bot-workspace').classList.add('hidden');
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    await loadBots();
+                }
+            } catch (err) {
+                alert("Error deleting bot.");
+            }
+        }
+
+        // Document Management
+
+        async function loadDocuments() {
+            if (!activeBot) return;
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}/documents`);
+                const docs = await res.json();
+                const container = document.getElementById('documents-list');
+                
+                if (docs.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-6 text-center text-xs text-slate-500">
+                            No documents uploaded yet.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = docs.map(doc => `
+                    <div class="flex items-center justify-between p-4 bg-slate-900/10 border-b border-slate-800/80">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="file-text" class="w-5 h-5 text-brand-400"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-200">${escapeHtml(doc.name)}</p>
+                                <p class="text-[10px] text-slate-500">${(doc.content.length / 1024).toFixed(1)} KB</p>
+                            </div>
+                        </div>
+                        <button onclick="deleteDocument(${doc.id})" class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Failed to load documents:", err);
+            }
+        }
+
+        async function uploadDocumentFile() {
+            if (!activeBot) return;
+            const fileInput = document.getElementById('doc-file-input');
+            if (fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const progress = document.getElementById('upload-status');
+            progress.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}/documents`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    fileInput.value = ''; // Reset
+                    await loadDocuments();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || "Error uploading document.");
+                }
+            } catch (err) {
+                alert("Upload connection error.");
+            } finally {
+                progress.classList.add('hidden');
+            }
+        }
+
+        async function deleteDocument(docId) {
+            if (!activeBot) return;
+            if (!confirm("Delete this document and all its text embeddings?")) return;
+
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}/documents/${docId}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    await loadDocuments();
+                } else {
+                    alert("Failed to delete document.");
+                }
+            } catch (err) {
+                alert("Error connecting to server.");
+            }
+        }
+
+        // Chat Playground Execution
+
+        async function sendChatMessage(e) {
+            e.preventDefault();
+            if (!activeBot) return;
+            const input = document.getElementById('chat-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            input.value = '';
+
+            const chatContainer = document.getElementById('chat-messages');
+            
+            // Clean empty state if first message
+            if (chatContainer.querySelector('.max-w-2xl')) {
+                chatContainer.innerHTML = '';
+            }
+
+            // Append User message
+            chatContainer.innerHTML += `
+                <div class="flex items-start gap-4 max-w-3xl mx-auto mb-6">
+                    <div class="h-8 w-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        U
+                    </div>
+                    <div class="flex-1 min-w-0 bg-slate-900/40 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100">
+                        ${escapeHtml(query)}
+                    </div>
+                </div>
+            `;
+            
+            // Append Bot Typing State
+            const botMessageId = 'bot-msg-' + Date.now();
+            chatContainer.innerHTML += `
+                <div class="flex items-start gap-4 max-w-3xl mx-auto mb-6" id="${botMessageId}">
+                    <div class="h-8 w-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        B
+                    </div>
+                    <div class="flex-1 min-w-0 bg-brand-500/5 border border-brand-500/10 rounded-2xl px-4 py-3 text-sm text-slate-200">
+                        <div class="flex items-center gap-1.5 text-xs text-brand-400">
+                            <i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Generating RAG response...
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`/api/bots/${activeBot.id}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const botMsgDiv = document.getElementById(botMessageId).querySelector('.flex-1');
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Render markdown or paragraphs
+                    botMsgDiv.innerHTML = `<p class="whitespace-pre-wrap leading-relaxed">${escapeHtml(data.response)}</p>`;
+                    
+                    // Render Context Sources on the right side panel
+                    const sourcesContainer = document.getElementById('retrieved-sources');
+                    if (data.context.length === 0) {
+                        sourcesContainer.innerHTML = `
+                            <div class="text-xs text-slate-500 text-center py-8">
+                                No context retrieved from files.
+                            </div>
+                        `;
+                    } else {
+                        sourcesContainer.innerHTML = data.context.map((src, index) => `
+                            <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[9px] font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded">Segment #${index + 1}</span>
+                                    <span class="text-[9px] text-slate-500">Sim: ${src.vec_score.toFixed(3)} | KW: ${src.kw_score.toFixed(3)}</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 line-clamp-3 leading-relaxed hover:line-clamp-none transition-all duration-200 cursor-pointer">${escapeHtml(src.content)}</p>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    const err = await res.json();
+                    botMsgDiv.innerHTML = `<p class="text-red-400 font-semibold text-xs">Error: ${escapeHtml(err.detail || "RAG engine query failed.")}</p>`;
+                }
+            } catch (err) {
+                const botMsgDiv = document.getElementById(botMessageId).querySelector('.flex-1');
+                botMsgDiv.innerHTML = `<p class="text-red-400 font-semibold text-xs">Network Connection Error. Make sure LLM backend is active.</p>`;
+            }
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Helpers
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>

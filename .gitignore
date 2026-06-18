@@ -1,0 +1,28 @@
+# Python Environment & Cache
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local RAGBuilder Databases, Logs & Temp Files
+ragbuilder.db
+ragbuilder.log
+qdrant_db/
+temp/
+test_db/
+
+# Node & Next.js Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+node_modules/
+
+# OS Files
+.DS_Store
+Thumbs.db
