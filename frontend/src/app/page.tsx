@@ -1912,175 +1912,295 @@ export default function Home() {
 
       {/* Creation Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white">Create Custom Bot</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div 
+            className="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 transform scale-100 flex flex-col max-h-[90vh]"
+            style={{
+              boxShadow: "0 20px 50px -12px rgba(0,0,0,0.5), 0 0 40px -10px rgba(99, 102, 241, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)"
+            }}
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Configure New RAG Agent</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Set up local LLMs, vector search parameters, and customize agent identity.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCreateModalOpen(false)} 
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Bot Name</label>
-                <input
-                  type="text"
-                  value={newBotName}
-                  onChange={(e) => setNewBotName(e.target.value)}
-                  placeholder="e.g. CricketBot"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                />
-              </div>
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Left Column: Identity & Connection */}
+                <div className="space-y-4">
+                  <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest border-b border-slate-800 pb-1.5">
+                    1. Agent Identity
+                  </div>
+                  
+                  {/* Bot Name */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Agent Name</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={newBotName}
+                        onChange={(e) => setNewBotName(e.target.value)}
+                        placeholder="e.g. CricketBot"
+                        className="w-full bg-slate-950/60 border border-slate-850 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
-                <input
-                  type="text"
-                  value={newBotDesc}
-                  onChange={(e) => setNewBotDesc(e.target.value)}
-                  placeholder="e.g. Only Cricket details"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                />
-              </div>
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Description</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={newBotDesc}
+                        onChange={(e) => setNewBotDesc(e.target.value)}
+                        placeholder="e.g. Expert on cricket metrics and rules"
+                        className="w-full bg-slate-950/60 border border-slate-850 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">LLM Provider</label>
-                  <select
-                    value={newBotProvider}
-                    onChange={(e) => setNewBotProvider(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                  >
-                    <option value="ollama">Ollama</option>
-                    <option value="lm_studio">LM Studio</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">API URL</label>
-                  <input
-                    type="text"
-                    value={newBotUrl}
-                    onChange={(e) => setNewBotUrl(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                  />
-                </div>
-              </div>
+                  {/* Local Provider Connection Group */}
+                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 space-y-4 mt-2">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Local Provider Connection</span>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">LLM Chat Model</label>
-                  <select
-                    value={newBotLlmSelect}
-                    onChange={(e) => setNewBotLlmSelect(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                  >
-                    {detectedModels.length === 0 ? (
-                      <option value="">-- Click Detect --</option>
-                    ) : (
-                      detectedModels.map((m) => <option key={m} value={m}>{m}</option>)
-                    )}
-                  </select>
-                  <input
-                    type="text"
-                    value={newBotLlm}
-                    onChange={(e) => setNewBotLlm(e.target.value)}
-                    placeholder="Or type custom model..."
-                    className="mt-1.5 w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Embedding Model</label>
-                  <select
-                    value={newBotEmbedSelect}
-                    onChange={(e) => setNewBotEmbedSelect(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                  >
-                    {detectedModels.length === 0 ? (
-                      <option value="">-- Click Detect --</option>
-                    ) : (
-                      detectedModels.map((m) => <option key={m} value={m}>{m}</option>)
-                    )}
-                  </select>
-                  <input
-                    type="text"
-                    value={newBotEmbed}
-                    onChange={(e) => setNewBotEmbed(e.target.value)}
-                    placeholder="Or type custom model..."
-                    className="mt-1.5 w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none"
-                  />
-                </div>
-              </div>
+                    {/* Provider Selection */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Provider Engine</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setNewBotProvider("ollama")}
+                          className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                            newBotProvider === "ollama"
+                              ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-2 ring-indigo-500/20"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-450"
+                          }`}
+                        >
+                          <Cpu className="w-4 h-4 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="text-xs font-bold text-white">Ollama</div>
+                            <div className="text-[9px] text-slate-500 mt-0.5">Local models (11434)</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewBotProvider("lm_studio")}
+                          className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                            newBotProvider === "lm_studio"
+                              ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-2 ring-indigo-500/20"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-450"
+                          }`}
+                        >
+                          <Layers className="w-4 h-4 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="text-xs font-bold text-white">LM Studio</div>
+                            <div className="text-[9px] text-slate-500 mt-0.5">Local server (1234)</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Search Strategy</label>
-                  <select
-                    value={newBotStrategy}
-                    onChange={(e) => setNewBotStrategy(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
-                  >
-                    <option value="vector">Vector Similarity</option>
-                    <option value="keyword">Keyword Search</option>
-                    <option value="hybrid">Hybrid Search</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={handleTestConnection}
-                    className="w-full bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-350 py-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Detect models
-                  </button>
-                </div>
-              </div>
+                    {/* API URL */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Base Endpoint URL</label>
+                      <input
+                        type="text"
+                        value={newBotUrl}
+                        onChange={(e) => setNewBotUrl(e.target.value)}
+                        className="w-full bg-slate-950/80 border border-slate-850 rounded-xl p-2.5 text-xs font-mono text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
 
-              {/* Bot Generation Slider */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5" /> LLM Temperature ({newBotTemp})
-                  </label>
+                    {/* Trigger Detection Button */}
+                    <button
+                      type="button"
+                      onClick={handleTestConnection}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/30 text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/15 hover:shadow-indigo-500/30 transition-all"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${detectionStatus === "loading" ? "animate-spin" : ""}`} />
+                      <span>Detect & Load Local Models</span>
+                    </button>
+                  </div>
                 </div>
-                <input 
-                  type="range" 
-                  min="0.0" 
-                  max="1.0" 
-                  step="0.05"
-                  value={newBotTemp} 
-                  onChange={(e) => setNewBotTemp(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
-                />
-              </div>
 
-              {detectionStatus !== "idle" && (
-                <div className={`text-xs p-3 rounded-xl flex items-center gap-2 border ${
-                  detectionStatus === "loading"
-                    ? "text-indigo-400 bg-indigo-500/5 border-indigo-500/10"
-                    : detectionStatus === "success"
-                    ? "text-emerald-400 bg-emerald-500/5 border-emerald-500/10"
-                    : "text-red-400 bg-red-500/5 border-red-500/10"
-                }`}>
-                  {detectionStatus === "loading" && <Loader className="w-4 h-4 animate-spin" />}
-                  {detectionStatus === "success" && <Check className="w-4 h-4" />}
-                  {detectionStatus === "error" && <AlertTriangle className="w-4 h-4" />}
-                  <span>{detectionMsg}</span>
+                {/* Right Column: Engine Config & Models */}
+                <div className="space-y-4">
+                  <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest border-b border-slate-800 pb-1.5">
+                    2. RAG & Model Configuration
+                  </div>
+
+                  {/* Connection Warning/Status Bar */}
+                  {detectionStatus !== "idle" ? (
+                    <div className={`text-xs p-3 rounded-xl flex items-start gap-2.5 border transition-all ${
+                      detectionStatus === "loading"
+                        ? "text-indigo-400 bg-indigo-500/5 border-indigo-500/10"
+                        : detectionStatus === "success"
+                        ? "text-emerald-400 bg-emerald-500/5 border-emerald-500/10"
+                        : "text-red-400 bg-red-500/5 border-red-500/10"
+                    }`}>
+                      {detectionStatus === "loading" && <Loader className="w-4 h-4 animate-spin shrink-0 mt-0.5" />}
+                      {detectionStatus === "success" && <Check className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />}
+                      {detectionStatus === "error" && <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />}
+                      <span className="leading-tight">{detectionMsg}</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-400 flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500/80" />
+                      <span className="leading-tight">Verify connection to load models list. Alternatively, you can type names manually.</span>
+                    </div>
+                  )}
+
+                  {/* LLM Chat Model */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">LLM Chat Model</label>
+                    <div className="space-y-2">
+                      {detectedModels.length > 0 ? (
+                        <select
+                          value={newBotLlmSelect}
+                          onChange={(e) => setNewBotLlmSelect(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        >
+                          {detectedModels.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="text-xs bg-slate-950/45 border border-dashed border-slate-850 rounded-xl p-3 text-slate-500 text-center">
+                          Please click 'Detect Models' to scan active engines
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={newBotLlm}
+                        onChange={(e) => setNewBotLlm(e.target.value)}
+                        placeholder="Or type custom model name manually..."
+                        className="w-full bg-slate-950/60 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Embedding Model */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Embedding Model</label>
+                    <div className="space-y-2">
+                      {detectedModels.length > 0 ? (
+                        <select
+                          value={newBotEmbedSelect}
+                          onChange={(e) => setNewBotEmbedSelect(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        >
+                          {detectedModels.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="text-xs bg-slate-950/45 border border-dashed border-slate-850 rounded-xl p-3 text-slate-500 text-center">
+                          Please click 'Detect Models' to scan active engines
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={newBotEmbed}
+                        onChange={(e) => setNewBotEmbed(e.target.value)}
+                        placeholder="Or type custom embedding model manually..."
+                        className="w-full bg-slate-950/60 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Search Strategy */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Search Strategy</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "vector", label: "Vector", desc: "Similarity search" },
+                        { value: "keyword", label: "Keyword", desc: "Exact match" },
+                        { value: "hybrid", label: "Hybrid", desc: "Combined power" }
+                      ].map((strat) => (
+                        <button
+                          key={strat.value}
+                          type="button"
+                          onClick={() => setNewBotStrategy(strat.value)}
+                          className={`p-2 rounded-xl border text-center flex flex-col justify-center transition-all ${
+                            newBotStrategy === strat.value
+                              ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-1 ring-indigo-500/30"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-450"
+                          }`}
+                        >
+                          <span className="text-xs font-bold text-white">{strat.label}</span>
+                          <span className="text-[8px] text-slate-500 mt-0.5">{strat.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bot Generation Slider */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-indigo-500" /> 
+                        <span>LLM Temperature ({newBotTemp})</span>
+                      </label>
+                      <span className="text-[9px] font-mono text-slate-500">
+                        {newBotTemp <= 0.2 ? "Precise" : newBotTemp >= 0.7 ? "Creative" : "Balanced"}
+                      </span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0.0" 
+                      max="1.0" 
+                      step="0.05"
+                      value={newBotTemp} 
+                      onChange={(e) => setNewBotTemp(parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
+                    />
+                  </div>
                 </div>
-              )}
+
+              </div>
             </div>
 
-            <div className="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-950/40">
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-950/40 shrink-0">
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-850 text-slate-300 text-sm font-semibold"
+                className="px-5 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-850 text-slate-350 text-xs font-bold transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateBot}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-500/20"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all flex items-center gap-2"
               >
-                Create Bot
+                <Plus className="w-4 h-4" />
+                <span>Create Agent</span>
               </button>
             </div>
           </div>
