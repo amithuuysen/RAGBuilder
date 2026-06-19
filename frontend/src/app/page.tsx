@@ -879,6 +879,9 @@ export default function Home() {
   const sBorder = isDark ? "border-slate-800" : "border-slate-200";
   const sTextMuted = isDark ? "text-slate-400" : "text-slate-500";
   const sTextTitle = isDark ? "text-white font-bold" : "text-slate-800 font-bold";
+  const sInput = isDark 
+    ? "bg-slate-950 border border-slate-850 text-white placeholder-slate-600 focus:border-indigo-500 focus:ring-indigo-500/20" 
+    : "bg-white border border-slate-250 text-slate-900 placeholder-slate-450 focus:border-indigo-500 focus:ring-indigo-500/20 shadow-sm";
 
   return (
     <div className={`flex-1 flex overflow-hidden font-sans h-screen transition-all duration-300 ${sBg}`}>
