@@ -31,6 +31,18 @@ def get_lm_studio_models(api_url: str):
         logger.warning(f"Failed to fetch models from LM Studio at {url}: {e}")
     return []
 
+def get_vllm_models(api_url: str):
+    """Fetch models from vLLM (OpenAI-compatible)."""
+    url = f"{api_url.rstrip('/')}/v1/models"
+    try:
+        response = requests.get(url, timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            return [m["id"] for m in data.get("data", [])]
+    except Exception as e:
+        logger.warning(f"Failed to fetch models from vLLM at {url}: {e}")
+    return []
+
 def get_embeddings_model(provider: str, api_url: str, model: str):
     """Get LangChain Embeddings instance."""
     if not model:
@@ -41,10 +53,10 @@ def get_embeddings_model(provider: str, api_url: str, model: str):
             base_url=api_url.rstrip('/'),
             model=model
         )
-    elif provider == "lm_studio":
+    elif provider in ("lm_studio", "vllm"):
         return OpenAIEmbeddings(
             openai_api_base=f"{api_url.rstrip('/')}/v1",
-            openai_api_key="lm-studio",
+            openai_api_key="token" if provider == "vllm" else "lm-studio",
             model=model
         )
     raise ValueError(f"Unsupported provider: {provider}")
@@ -57,10 +69,10 @@ def get_llm_model(provider: str, api_url: str, model: str, temperature: float = 
             model=model,
             temperature=temperature
         )
-    elif provider == "lm_studio":
+    elif provider in ("lm_studio", "vllm"):
         return ChatOpenAI(
             openai_api_base=f"{api_url.rstrip('/')}/v1",
-            openai_api_key="lm-studio",
+            openai_api_key="token" if provider == "vllm" else "lm-studio",
             model=model,
             temperature=temperature
         )

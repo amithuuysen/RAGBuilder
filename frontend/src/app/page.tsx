@@ -548,8 +548,10 @@ export default function Home() {
   useEffect(() => {
     if (newBotProvider === "ollama") {
       setNewBotUrl("http://localhost:11434");
-    } else {
+    } else if (newBotProvider === "lm_studio") {
       setNewBotUrl("http://localhost:1234");
+    } else if (newBotProvider === "vllm") {
+      setNewBotUrl("http://localhost:8000");
     }
   }, [newBotProvider]);
 
@@ -1006,7 +1008,7 @@ export default function Home() {
             <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
             <div className="flex-1 min-w-0">
               <p className={`text-[10px] font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>Local Services Active</p>
-              <p className={`text-[9px] truncate ${sTextMuted}`}>Ollama & LM Studio ready</p>
+              <p className={`text-[9px] truncate ${sTextMuted}`}>Ollama, LM Studio & vLLM ready</p>
             </div>
           </div>
         </div>
@@ -1461,7 +1463,7 @@ export default function Home() {
                   <h4 className={`text-sm font-bold mb-1 flex items-center gap-2 ${isDark ? "text-slate-200" : "text-slate-800"}`}>
                     <Check className="w-4 h-4 text-emerald-500" /> Local & Private
                   </h4>
-                  <p className={`text-xs ${sTextMuted}`}>Your documents never leave your computer. Powered fully by Ollama or LM Studio.</p>
+                  <p className={`text-xs ${sTextMuted}`}>Your documents never leave your computer. Powered fully by Ollama, LM Studio, or vLLM.</p>
                 </div>
                 <div className={`p-5 rounded-2xl border transition-all duration-300 ${sCard}`}>
                   <h4 className={`text-sm font-bold mb-1 flex items-center gap-2 ${isDark ? "text-slate-200" : "text-slate-800"}`}>
@@ -1997,35 +1999,50 @@ export default function Home() {
                     {/* Provider Selection */}
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Provider Engine</label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setNewBotProvider("ollama")}
-                          className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                          className={`p-2.5 rounded-xl border text-left flex items-start gap-2 transition-all ${
                             newBotProvider === "ollama"
                               ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-2 ring-indigo-500/20"
-                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-450"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-455"
                           }`}
                         >
-                          <Cpu className="w-4 h-4 mt-0.5 shrink-0" />
+                          <Cpu className="w-4 h-4 mt-0.5 shrink-0 animate-pulse text-indigo-500" />
                           <div>
                             <div className="text-xs font-bold text-white">Ollama</div>
-                            <div className="text-[9px] text-slate-500 mt-0.5">Local models (11434)</div>
+                            <div className="text-[8px] text-slate-500 mt-0.5">(Port 11434)</div>
                           </div>
                         </button>
                         <button
                           type="button"
                           onClick={() => setNewBotProvider("lm_studio")}
-                          className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                          className={`p-2.5 rounded-xl border text-left flex items-start gap-2 transition-all ${
                             newBotProvider === "lm_studio"
                               ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-2 ring-indigo-500/20"
-                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-450"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-455"
                           }`}
                         >
-                          <Layers className="w-4 h-4 mt-0.5 shrink-0" />
+                          <Layers className="w-4 h-4 mt-0.5 shrink-0 text-purple-500" />
                           <div>
                             <div className="text-xs font-bold text-white">LM Studio</div>
-                            <div className="text-[9px] text-slate-500 mt-0.5">Local server (1234)</div>
+                            <div className="text-[8px] text-slate-500 mt-0.5">(Port 1234)</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewBotProvider("vllm")}
+                          className={`p-2.5 rounded-xl border text-left flex items-start gap-2 transition-all ${
+                            newBotProvider === "vllm"
+                              ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 ring-2 ring-indigo-500/20"
+                              : "bg-slate-950/40 border-slate-850 hover:border-slate-800 text-slate-455"
+                          }`}
+                        >
+                          <Terminal className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
+                          <div>
+                            <div className="text-xs font-bold text-white">vLLM</div>
+                            <div className="text-[8px] text-slate-500 mt-0.5">(Port 8000)</div>
                           </div>
                         </button>
                       </div>

@@ -48,7 +48,7 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 class BotCreate(BaseModel):
     name: str
     description: Optional[str] = ""
-    provider: str # "ollama" or "lm_studio"
+    provider: str # "ollama", "lm_studio", or "vllm"
     api_url: str
     llm_model: str
     embedding_model: str
@@ -228,6 +228,12 @@ async def test_provider(req: TestProviderRequest):
             logger.info(f"LM Studio connection successful: found {len(models)} models")
             return {"success": True, "models": models}
         return {"success": False, "message": "Failed to connect or fetch models from LM Studio. Make sure it is running and Local Server is enabled."}
+    elif provider == "vllm":
+        models = providers.get_vllm_models(api_url)
+        if models:
+            logger.info(f"vLLM connection successful: found {len(models)} models")
+            return {"success": True, "models": models}
+        return {"success": False, "message": "Failed to connect or fetch models from vLLM. Make sure it is running and active."}
     
     raise HTTPException(status_code=400, detail="Invalid provider specified")
 
