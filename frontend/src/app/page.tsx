@@ -1012,7 +1012,7 @@ export default function Home() {
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col min-w-0 relative h-full">
+      <main className="flex-1 flex flex-col min-w-0 relative h-full min-h-0 overflow-hidden">
         {activeTab === "system" ? (
           /* System Status & Live Logs Dashboard */
           <div className={`flex-1 flex flex-col h-full overflow-hidden ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
@@ -1473,7 +1473,7 @@ export default function Home() {
           </div>
         ) : (
           /* Active Bot Workspace */
-          <div className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
+          <div className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
             {/* Workspace Header */}
             <div className={`px-8 py-5 border-b flex items-center justify-between shrink-0 transition-all duration-300 ${isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200 shadow-sm shadow-slate-100/30"}`}>
               <div className="flex items-center gap-4">
@@ -1516,11 +1516,11 @@ export default function Home() {
             </div>
 
             {/* Workspace Panels */}
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 min-h-0 overflow-hidden relative">
               
               {/* Tab: Chat Playground */}
               {activeTab === "chat" && (
-                <div className="h-full flex overflow-hidden">
+                <div className="h-full flex min-h-0 overflow-hidden">
                   
                   {/* Left Side: Sessions List inside Chat tab */}
                   <div className={`w-56 flex flex-col justify-between shrink-0 border-r transition-all duration-300 ${
@@ -1598,7 +1598,7 @@ export default function Home() {
                   </div>
  
                   {/* Center: Chat Window */}
-                  <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${isDark ? "bg-[#05070a]" : "bg-white border-r border-slate-150"}`}>
+                  <div className={`flex-1 flex flex-col h-full min-h-0 transition-all duration-300 ${isDark ? "bg-[#05070a]" : "bg-white border-r border-slate-150"}`}>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       {chatMessages.length === 0 ? (
                         <div className={`max-w-2xl mx-auto text-center py-12 ${sTextMuted}`}>
