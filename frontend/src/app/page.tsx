@@ -1517,11 +1517,11 @@ export default function Home() {
             </div>
 
             {/* Workspace Panels */}
-            <div className="flex-1 min-h-0 overflow-hidden relative">
+            <div className="flex-1 flex flex-col relative overflow-hidden">
               
               {/* Tab: Chat Playground */}
               {activeTab === "chat" && (
-                <div className="absolute inset-0 flex min-h-0 overflow-hidden">
+                <div className="flex-1 flex min-h-0 overflow-hidden">
                   
                   {/* Left Side: Sessions List inside Chat tab */}
                   <div className={`w-56 flex flex-col justify-between shrink-0 border-r transition-all duration-300 ${
@@ -1693,7 +1693,7 @@ export default function Home() {
 
               {/* Tab: Documents */}
               {activeTab === "documents" && (
-                <div className={`absolute inset-0 overflow-y-auto p-8 transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
+                <div className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div>
                       <h3 className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}>Bot Knowledge Base</h3>
@@ -1766,7 +1766,7 @@ export default function Home() {
 
               {/* Tab: Settings & API */}
               {activeTab === "settings" && (
-                <div className={`absolute inset-0 overflow-y-auto p-8 transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
+                <div className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
                   <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
                     
                     {/* Config Form */}
