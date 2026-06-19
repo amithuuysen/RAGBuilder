@@ -1599,7 +1599,7 @@ export default function Home() {
                   </div>
  
                   {/* Center: Chat Window */}
-                  <div className={`flex-1 flex flex-col h-full min-h-0 transition-all duration-300 ${isDark ? "bg-[#05070a]" : "bg-white border-r border-slate-150"}`}>
+                  <div className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300 ${isDark ? "bg-[#05070a]" : "bg-white border-r border-slate-150"}`}>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       {chatMessages.length === 0 ? (
                         <div className={`max-w-2xl mx-auto text-center py-12 ${sTextMuted}`}>
