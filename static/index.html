@@ -901,31 +901,52 @@
 
                 const botMsgDiv = document.getElementById(botMessageId).querySelector('.flex-1');
                 
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    // Render markdown or paragraphs
-                    botMsgDiv.innerHTML = `<p class="whitespace-pre-wrap leading-relaxed">${escapeHtml(data.response)}</p>`;
-                    
-                    // Render Context Sources on the right side panel
-                    const sourcesContainer = document.getElementById('retrieved-sources');
-                    if (data.context.length === 0) {
-                        sourcesContainer.innerHTML = `
-                            <div class="text-xs text-slate-500 text-center py-8">
-                                No context retrieved from files.
-                            </div>
-                        `;
-                    } else {
-                        sourcesContainer.innerHTML = data.context.map((src, index) => `
-                            <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[9px] font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded">Segment #${index + 1}</span>
-                                    <span class="text-[9px] text-slate-500">Sim: ${src.vec_score.toFixed(3)} | KW: ${src.kw_score.toFixed(3)}</span>
-                                </div>
-                                <p class="text-[10px] text-slate-400 line-clamp-3 leading-relaxed hover:line-clamp-none transition-all duration-200 cursor-pointer">${escapeHtml(src.content)}</p>
-                            </div>
-                        `).join('');
+                if (res.ok && res.body) {
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = "";
+                    let botResponseText = "";
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const parts = buffer.split("\n\n");
+                        buffer = parts.pop() || "";
+
+                        for (const part of parts) {
+                            if (!part.trim()) continue;
+                            const lines = part.split("\n");
+                            let event = "";
+                            let data = "";
+                            for (const line of lines) {
+                                if (line.startsWith("event: ")) event = line.substring(7);
+                                else if (line.startsWith("data: ")) data = line.substring(6);
+                            }
+                            if (event === "metadata") {
+                                const meta = JSON.parse(data);
+                                const sourcesContainer = document.getElementById('retrieved-sources');
+                                if (meta.context && meta.context.length > 0) {
+                                    sourcesContainer.innerHTML = meta.context.map((src, index) => `
+                                        <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[9px] font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded">Segment #${index + 1}</span>
+                                                <span class="text-[9px] text-slate-500">${escapeHtml(src.metadata?.doc_name || 'N/A')}</span>
+                                            </div>
+                                            <p class="text-[10px] text-slate-400 line-clamp-3 leading-relaxed">${escapeHtml(src.content)}</p>
+                                        </div>
+                                    `).join('');
+                                }
+                            } else if (event === "token") {
+                                botResponseText += JSON.parse(data);
+                                botMsgDiv.innerHTML = `<p class="whitespace-pre-wrap leading-relaxed">${escapeHtml(botResponseText)}</p>`;
+                            } else if (event === "error") {
+                                botMsgDiv.innerHTML = `<p class="text-red-400 font-semibold text-xs">Error: ${escapeHtml(JSON.parse(data))}</p>`;
+                            }
+                        }
                     }
+                } else if (res.ok) {
+                    botMsgDiv.innerHTML = `<p class="text-red-400 font-semibold text-xs">Empty response body.</p>`;
                 } else {
                     const err = await res.json();
                     botMsgDiv.innerHTML = `<p class="text-red-400 font-semibold text-xs">Error: ${escapeHtml(err.detail || "RAG engine query failed.")}</p>`;

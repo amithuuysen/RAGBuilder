@@ -24,43 +24,17 @@ import {
   Terminal,
   Cpu,
   HardDrive,
-  Globe
+  Globe,
+  Download,
+  Search
 } from "lucide-react";
-
-const API_BASE = "http://localhost:8000";
-
-interface BotType {
-  id: number;
-  name: string;
-  description: string;
-  provider: string;
-  api_url: string;
-  llm_model: string;
-  embedding_model: string;
-  search_technique: string;
-  chunk_size: number;
-  chunk_overlap: number;
-  system_prompt: string;
-  temperature: number;
-}
-
-interface DocType {
-  id: number;
-  bot_id: number;
-  name: string;
-  content: string;
-}
-
-interface SourceChunkType {
-  content: string;
-  metadata: {
-    doc_name: string;
-    doc_id: number;
-    chunk_index: number;
-  };
-  vec_score: number;
-  kw_score: number;
-}
+import { API_BASE } from "@/lib/api";
+import type { BotType, DocType, SourceChunkType, RetrievalFilters, MetadataFacets } from "@/lib/types";
+import { normalizeTags } from "@/lib/tags";
+import { useToast } from "@/components/Toast";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
+import { MetadataFilterBar } from "@/components/MetadataFilterBar";
+import { RetrievalPlayground } from "@/components/RetrievalPlayground";
 
 interface MessageType {
   sender: "user" | "bot";
@@ -272,9 +246,10 @@ function formatUptime(seconds: number): string {
 }
 
 export default function Home() {
+  const { showToast } = useToast();
   const [bots, setBots] = useState<BotType[]>([]);
   const [activeBot, setActiveBot] = useState<BotType | null>(null);
-  const [activeTab, setActiveTab] = useState<"chat" | "documents" | "settings" | "system">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "documents" | "settings" | "retrieve" | "system">("chat");
 
   // Create Bot Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -288,14 +263,26 @@ export default function Home() {
   const [newBotEmbedSelect, setNewBotEmbedSelect] = useState("");
   const [newBotStrategy, setNewBotStrategy] = useState("vector");
   const [newBotTemp, setNewBotTemp] = useState(0.2);
+  const [newBotChunkSize, setNewBotChunkSize] = useState(500);
+  const [newBotChunkOverlap, setNewBotChunkOverlap] = useState(50);
 
   // Edit Settings State
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editTechnique, setEditTechnique] = useState("vector");
   const [editLlm, setEditLlm] = useState("");
+  const [editEmbed, setEditEmbed] = useState("");
   const [editSystemPrompt, setEditSystemPrompt] = useState("");
   const [editTemp, setEditTemp] = useState(0.2);
+  const [editChunkSize, setEditChunkSize] = useState(500);
+  const [editChunkOverlap, setEditChunkOverlap] = useState(50);
+  const [editTopK, setEditTopK] = useState(4);
+  const [editVectorWeight, setEditVectorWeight] = useState(0.7);
+  const [editKeywordWeight, setEditKeywordWeight] = useState(0.3);
+  const [editScoreThreshold, setEditScoreThreshold] = useState(0);
+  const [editUseMmr, setEditUseMmr] = useState(false);
+  const [editCiteSources, setEditCiteSources] = useState(true);
+  const [isReindexing, setIsReindexing] = useState(false);
 
   // Connection & Model Detection State
   const [detectedModels, setDetectedModels] = useState<string[]>([]);
@@ -305,6 +292,12 @@ export default function Home() {
   // Documents State
   const [documents, setDocuments] = useState<DocType[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadTags, setUploadTags] = useState("");
+  const [uploadAuthor, setUploadAuthor] = useState("");
+  const [uploadSourceUrl, setUploadSourceUrl] = useState("");
+  const [lastUploadResult, setLastUploadResult] = useState<{ name: string; chunks: number } | null>(null);
+  const [metadataFacets, setMetadataFacets] = useState<MetadataFacets | null>(null);
+  const [chatFilters, setChatFilters] = useState<RetrievalFilters>({});
 
   // Chat Sessions & Message History
   const [sessions, setSessions] = useState<SessionType[]>([]);
@@ -443,17 +436,26 @@ export default function Home() {
     setActiveTab("chat");
     setActiveSessionId(null);
     setSessions([]);
+    setChatFilters(bot.default_filters || {});
 
-    // Populate Edit forms
     setEditName(bot.name);
     setEditDesc(bot.description || "");
     setEditTechnique(bot.search_technique);
     setEditLlm(bot.llm_model);
+    setEditEmbed(bot.embedding_model);
     setEditSystemPrompt(bot.system_prompt || "");
-    setEditTemp(bot.temperature !== undefined ? bot.temperature : 0.2);
+    setEditTemp(bot.temperature ?? 0.2);
+    setEditChunkSize(bot.chunk_size ?? 500);
+    setEditChunkOverlap(bot.chunk_overlap ?? 50);
+    setEditTopK(bot.top_k ?? 4);
+    setEditVectorWeight(bot.vector_weight ?? 0.7);
+    setEditKeywordWeight(bot.keyword_weight ?? 0.3);
+    setEditScoreThreshold(bot.score_threshold ?? 0);
+    setEditUseMmr(bot.use_mmr ?? false);
+    setEditCiteSources(bot.cite_sources ?? true);
 
-    // Load documents & sessions
     fetchDocuments(bot.id);
+    fetchMetadataFacets(bot.id);
     fetchSessions(bot.id, true);
   };
 
@@ -461,11 +463,21 @@ export default function Home() {
     try {
       const res = await fetch(`${API_BASE}/api/bots/${botId}/documents`);
       if (res.ok) {
-        const data = await res.json();
-        setDocuments(data);
+        setDocuments(await res.json());
       }
     } catch (err) {
       console.error("Failed to fetch documents:", err);
+    }
+  };
+
+  const fetchMetadataFacets = async (botId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/bots/${botId}/metadata/facets`);
+      if (res.ok) {
+        setMetadataFacets(await res.json());
+      }
+    } catch (err) {
+      console.error("Failed to fetch metadata facets:", err);
     }
   };
 
@@ -607,10 +619,12 @@ export default function Home() {
           llm_model: finalLlm,
           embedding_model: finalEmbed,
           search_technique: newBotStrategy,
-          chunk_size: 500,
-          chunk_overlap: 50,
+          chunk_size: newBotChunkSize,
+          chunk_overlap: newBotChunkOverlap,
           system_prompt: "You are a helpful assistant.",
-          temperature: newBotTemp
+          temperature: newBotTemp,
+          top_k: 4,
+          cite_sources: true
         })
       });
 
@@ -622,7 +636,7 @@ export default function Home() {
         setNewBotEmbed("");
         setIsCreateModalOpen(false);
         setDetectionStatus("idle");
-        
+        showToast("Bot created successfully", "success");
         await fetchBots();
         const detailRes = await fetch(`${API_BASE}/api/bots/${data.id}`);
         if (detailRes.ok) {
@@ -652,17 +666,24 @@ export default function Home() {
           provider: activeBot.provider,
           api_url: activeBot.api_url,
           llm_model: editLlm,
-          embedding_model: activeBot.embedding_model,
+          embedding_model: editEmbed,
           search_technique: editTechnique,
-          chunk_size: activeBot.chunk_size,
-          chunk_overlap: activeBot.chunk_overlap,
+          chunk_size: editChunkSize,
+          chunk_overlap: editChunkOverlap,
           system_prompt: editSystemPrompt,
-          temperature: editTemp
+          temperature: editTemp,
+          top_k: editTopK,
+          vector_weight: editVectorWeight,
+          keyword_weight: editKeywordWeight,
+          score_threshold: editScoreThreshold,
+          use_mmr: editUseMmr,
+          cite_sources: editCiteSources,
+          default_filters: chatFilters
         })
       });
 
       if (res.ok) {
-        alert("Settings updated successfully!");
+        showToast("Settings updated successfully!", "success");
         await fetchBots();
         const detailRes = await fetch(`${API_BASE}/api/bots/${activeBot.id}`);
         if (detailRes.ok) {
@@ -699,29 +720,78 @@ export default function Home() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activeBot || !e.target.files || e.target.files.length === 0) return;
 
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
+    const files = Array.from(e.target.files);
     setIsUploading(true);
+    setLastUploadResult(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/bots/${activeBot.id}/documents`, {
-        method: "POST",
-        body: formData
-      });
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (uploadTags) formData.append("tags", uploadTags);
+        if (uploadAuthor) formData.append("author", uploadAuthor);
+        if (uploadSourceUrl) formData.append("source_url", uploadSourceUrl);
 
-      if (res.ok) {
-        e.target.value = "";
-        await fetchDocuments(activeBot.id);
-      } else {
-        const err = await res.json();
-        alert(err.detail || "Error uploading document.");
+        const res = await fetch(`${API_BASE}/api/bots/${activeBot.id}/documents`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setLastUploadResult({ name: file.name, chunks: data.chunks_count });
+          showToast(`Indexed ${file.name}: ${data.chunks_count} chunks`, "success");
+        } else {
+          const err = await res.json();
+          showToast(err.detail || `Error uploading ${file.name}`, "error");
+        }
       }
-    } catch (err) {
-      alert("Upload connection error.");
+      e.target.value = "";
+      await fetchDocuments(activeBot.id);
+      await fetchMetadataFacets(activeBot.id);
+    } catch {
+      showToast("Upload connection error", "error");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleReindex = async () => {
+    if (!activeBot) return;
+    if (!confirm("Rebuild the entire vector index for this bot? This may take a while.")) return;
+    setIsReindexing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/bots/${activeBot.id}/reindex`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`Reindexed ${data.documents_reindexed} docs (${data.total_chunks} chunks)`, "success");
+        await fetchDocuments(activeBot.id);
+        await fetchMetadataFacets(activeBot.id);
+      } else {
+        showToast("Reindex failed", "error");
+      }
+    } finally {
+      setIsReindexing(false);
+    }
+  };
+
+  const handleExportBot = async () => {
+    if (!activeBot) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/bots/${activeBot.id}/export`);
+      if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${activeBot.name.replace(/\s+/g, "_")}_export.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Bot exported", "success");
+      }
+    } catch {
+      showToast("Export failed", "error");
     }
   };
 
@@ -762,7 +832,11 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/api/bots/${activeBot.id}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: queryText, session_id: activeSessionId })
+        body: JSON.stringify({
+          query: queryText,
+          session_id: activeSessionId,
+          filters: chatFilters
+        })
       });
 
       if (!res.ok) {
@@ -1498,7 +1572,7 @@ export default function Home() {
 
               {/* Workspace Tabs */}
               <div className={`flex items-center gap-1 p-1 rounded-xl border transition-all duration-300 ${isDark ? "bg-slate-900 border-slate-800" : "bg-slate-100 border-slate-200"}`}>
-                {(["chat", "documents", "settings"] as const).map((tab) => (
+                {(["chat", "documents", "retrieve", "settings"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -1512,7 +1586,7 @@ export default function Home() {
                           : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    {tab === "chat" ? "Chat Playground" : tab === "documents" ? "Documents" : "Configuration & API"}
+                    {tab === "chat" ? "Chat Playground" : tab === "documents" ? "Documents" : tab === "retrieve" ? "Retrieval" : "Configuration & API"}
                   </button>
                 ))}
               </div>
@@ -1602,6 +1676,12 @@ export default function Home() {
  
                   {/* Center: Chat Window */}
                   <div className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300 ${isDark ? "bg-[#05070a]" : "bg-white border-r border-slate-150"}`}>
+                    <MetadataFilterBar
+                      filters={chatFilters}
+                      facets={metadataFacets}
+                      onChange={setChatFilters}
+                      isDark={isDark}
+                    />
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       {chatMessages.length === 0 ? (
                         <div className={`max-w-2xl mx-auto text-center py-12 ${sTextMuted}`}>
@@ -1630,9 +1710,13 @@ export default function Home() {
                                 ? "bg-indigo-500/5 border-indigo-500/10 text-slate-200"
                                 : "bg-indigo-50/20 border-indigo-500/10 text-slate-700"
                             }`}>
-                              <p className="whitespace-pre-wrap leading-relaxed">
-                                {msg.text || (isChatGenerating && idx === chatMessages.length - 1 ? "Typing..." : "")}
-                              </p>
+                              {msg.sender === "bot" && !msg.error ? (
+                                <MarkdownMessage text={msg.text || (isChatGenerating && idx === chatMessages.length - 1 ? "Typing..." : "")} />
+                              ) : (
+                                <p className="whitespace-pre-wrap leading-relaxed">
+                                  {msg.text || (isChatGenerating && idx === chatMessages.length - 1 ? "Typing..." : "")}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))
@@ -1680,7 +1764,15 @@ export default function Home() {
                               </span>
                               <span className="text-[9px] text-slate-500 truncate max-w-[120px]">
                                 {src.metadata?.doc_name || "N/A"}
+                                {src.metadata?.page_number ? ` p.${src.metadata.page_number}` : ""}
                               </span>
+                            </div>
+                            <div className="flex gap-2 text-[8px] font-mono">
+                              <span className="text-cyan-400">v:{(src.vec_score ?? 0).toFixed(2)}</span>
+                              <span className="text-amber-400">k:{(src.kw_score ?? 0).toFixed(2)}</span>
+                              {src.combined_score !== undefined && (
+                                <span className="text-emerald-400">c:{src.combined_score.toFixed(2)}</span>
+                              )}
                             </div>
                             <p className={`text-[10px] leading-relaxed max-h-36 overflow-y-auto ${isDark ? "text-slate-400" : "text-slate-650"}`}>
                               {src.content}
@@ -1699,7 +1791,31 @@ export default function Home() {
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div>
                       <h3 className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}>Bot Knowledge Base</h3>
-                      <p className={`text-xs ${sTextMuted}`}>Upload documents to index them into vector segments.</p>
+                      <p className={`text-xs ${sTextMuted}`}>Upload documents with optional metadata tags. Supports bulk upload.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <input
+                        type="text"
+                        value={uploadTags}
+                        onChange={(e) => setUploadTags(e.target.value)}
+                        placeholder="Tags (comma-separated)"
+                        className={`rounded-lg px-3 py-2 text-xs border ${sInput}`}
+                      />
+                      <input
+                        type="text"
+                        value={uploadAuthor}
+                        onChange={(e) => setUploadAuthor(e.target.value)}
+                        placeholder="Author (optional)"
+                        className={`rounded-lg px-3 py-2 text-xs border ${sInput}`}
+                      />
+                      <input
+                        type="text"
+                        value={uploadSourceUrl}
+                        onChange={(e) => setUploadSourceUrl(e.target.value)}
+                        placeholder="Source URL (optional)"
+                        className={`rounded-lg px-3 py-2 text-xs border ${sInput}`}
+                      />
                     </div>
 
                     <div className={`border-2 border-dashed rounded-2xl p-8 transition-all duration-200 text-center relative ${
@@ -1709,6 +1825,7 @@ export default function Home() {
                     }`}>
                       <input 
                         type="file" 
+                        multiple
                         onChange={handleFileUpload}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
                       />
@@ -1716,8 +1833,8 @@ export default function Home() {
                         <div className={`inline-flex p-3 rounded-xl transition-all ${isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500 border border-slate-200 shadow-sm"}`}>
                           <UploadCloud className="w-8 h-8" />
                         </div>
-                        <div className={`text-sm font-semibold ${isDark ? "text-slate-350" : "text-slate-700"}`}>Click to upload file</div>
-                        <div className={`text-xs ${sTextMuted}`}>Supports Text (.txt), Markdown (.md), PDF (.pdf), or Word (.docx)</div>
+                        <div className={`text-sm font-semibold ${isDark ? "text-slate-350" : "text-slate-700"}`}>Drag & drop or click to upload</div>
+                        <div className={`text-xs ${sTextMuted}`}>PDF, DOCX, TXT, MD — multiple files supported</div>
                       </div>
                     </div>
 
@@ -1727,6 +1844,12 @@ export default function Home() {
                           <Loader className="w-5 h-5 text-indigo-400 animate-spin" />
                           <span className={`text-xs ${isDark ? "text-slate-300" : "text-slate-650"}`}>Processing & embedding chunks...</span>
                         </div>
+                      </div>
+                    )}
+
+                    {lastUploadResult && !isUploading && (
+                      <div className={`p-3 rounded-xl border text-xs ${isDark ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+                        Last upload: <strong>{lastUploadResult.name}</strong> — {lastUploadResult.chunks} chunks indexed
                       </div>
                     )}
 
@@ -1746,7 +1869,13 @@ export default function Home() {
                                 <FileText className="w-5 h-5 text-indigo-500" />
                                 <div>
                                   <p className={`text-xs font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>{doc.name}</p>
-                                  <p className={`text-[10px] ${sTextMuted}`}>{(doc.content.length / 1024).toFixed(1)} KB</p>
+                                  <p className={`text-[10px] ${sTextMuted}`}>
+                                    {doc.chunks_count ?? 0} chunks
+                                    {(() => {
+                                      const tags = normalizeTags(doc.tags);
+                                      return tags.length ? ` · ${tags.join(", ")}` : "";
+                                    })()}
+                                  </p>
                                 </div>
                               </div>
                               <button 
@@ -1762,6 +1891,20 @@ export default function Home() {
                         )}
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "retrieve" && activeBot && (
+                <div className={`flex-1 overflow-y-auto p-8 ${isDark ? "bg-[#090b10]" : "bg-slate-50"}`}>
+                  <div className="max-w-3xl mx-auto">
+                    <MetadataFilterBar
+                      filters={chatFilters}
+                      facets={metadataFacets}
+                      onChange={setChatFilters}
+                      isDark={isDark}
+                    />
+                    <RetrievalPlayground bot={activeBot} filters={chatFilters} isDark={isDark} />
                   </div>
                 </div>
               )}
@@ -1797,6 +1940,17 @@ export default function Home() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>LLM Model</label>
+                          <input type="text" value={editLlm} onChange={(e) => setEditLlm(e.target.value)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Embedding Model</label>
+                          <input type="text" value={editEmbed} onChange={(e) => setEditEmbed(e.target.value)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
                           <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Search Technique</label>
                           <select
                             value={editTechnique}
@@ -1809,15 +1963,46 @@ export default function Home() {
                           </select>
                         </div>
                         <div>
-                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>LLM Model</label>
-                          <input
-                            type="text"
-                            value={editLlm}
-                            onChange={(e) => setEditLlm(e.target.value)}
-                            className={`w-full rounded-lg p-2.5 text-sm focus:outline-none transition-all ${sInput}`}
-                          />
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Top K (retrieval)</label>
+                          <input type="number" min={1} max={20} value={editTopK} onChange={(e) => setEditTopK(parseInt(e.target.value) || 4)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Chunk Size</label>
+                          <input type="number" value={editChunkSize} onChange={(e) => setEditChunkSize(parseInt(e.target.value) || 500)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Chunk Overlap</label>
+                          <input type="number" value={editChunkOverlap} onChange={(e) => setEditChunkOverlap(parseInt(e.target.value) || 50)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Vector Weight</label>
+                          <input type="number" step="0.1" min={0} max={1} value={editVectorWeight} onChange={(e) => setEditVectorWeight(parseFloat(e.target.value) || 0.7)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Keyword Weight</label>
+                          <input type="number" step="0.1" min={0} max={1} value={editKeywordWeight} onChange={(e) => setEditKeywordWeight(parseFloat(e.target.value) || 0.3)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${sTextMuted}`}>Score Threshold</label>
+                          <input type="number" step="0.05" min={0} max={1} value={editScoreThreshold} onChange={(e) => setEditScoreThreshold(parseFloat(e.target.value) || 0)} className={`w-full rounded-lg p-2.5 text-sm ${sInput}`} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 pb-1">
+                          <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={editUseMmr} onChange={(e) => setEditUseMmr(e.target.checked)} className="accent-indigo-500" />
+                            MMR diversity
+                          </label>
+                          <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={editCiteSources} onChange={(e) => setEditCiteSources(e.target.checked)} className="accent-indigo-500" />
+                            Cite sources
+                          </label>
+                        </div>
 
                       {/* Generation Parameter: Temperature */}
                       <div>
@@ -1848,16 +2033,18 @@ export default function Home() {
                       </div>
 
                       <div className={`flex items-center justify-between pt-4 border-t transition-all duration-300 ${sBorder}`}>
-                        <button 
-                          onClick={handleDeleteBot}
-                          className="text-xs text-red-400 hover:text-red-500 font-semibold flex items-center gap-1.5 transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete Bot
-                        </button>
-                        <button 
-                          onClick={handleSaveSettings}
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow hover:scale-[1.01] transition-all"
-                        >
+                        <div className="flex items-center gap-3">
+                          <button onClick={handleDeleteBot} className="text-xs text-red-400 hover:text-red-500 font-semibold flex items-center gap-1.5 transition-all">
+                            <Trash2 className="w-4 h-4" /> Delete Bot
+                          </button>
+                          <button onClick={handleReindex} disabled={isReindexing} className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1.5">
+                            <RefreshCw className={`w-4 h-4 ${isReindexing ? "animate-spin" : ""}`} /> Reindex
+                          </button>
+                          <button onClick={handleExportBot} className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1.5">
+                            <Download className="w-4 h-4" /> Export
+                          </button>
+                        </div>
+                        <button onClick={handleSaveSettings} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow hover:scale-[1.01] transition-all">
                           Save Changes
                         </button>
                       </div>
@@ -2179,6 +2366,17 @@ export default function Home() {
                           <span className="text-[8px] text-slate-500 mt-0.5">{strat.desc}</span>
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Chunk Size</label>
+                      <input type="number" value={newBotChunkSize} onChange={(e) => setNewBotChunkSize(parseInt(e.target.value) || 500)} className="w-full bg-slate-950/60 border border-slate-850 rounded-xl px-3 py-2 text-sm text-white" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Chunk Overlap</label>
+                      <input type="number" value={newBotChunkOverlap} onChange={(e) => setNewBotChunkOverlap(parseInt(e.target.value) || 50)} className="w-full bg-slate-950/60 border border-slate-850 rounded-xl px-3 py-2 text-sm text-white" />
                     </div>
                   </div>
 
